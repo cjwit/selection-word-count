@@ -43,11 +43,46 @@ class WordCounter {
 			return;
 		}
 
-		// get lines
-		let documentLines = document.getText().split('\n');
+		// get lines as array of strings
+		let documentLines: string[] = document.getText().split('\n');
+
+		// get section targets and header information
+		let targets: TargetData[] = this._getTargets(documentLines);
+
+		// check current section boundaries and target information
+		let selectionLine: number = editor.selection.start.line;
+		let lastHeaderLine: number = this._findLastHeaderLine(selectionLine, targets);
+		let nextHeaderLine: number = this._findNextHeaderLine(selectionLine, targets);
+		let lastHeaderTarget: number = -1;
+		if (targets[lastHeaderLine].hasTarget) {
+			lastHeaderTarget = targets[lastHeaderLine].target;
+		}
+
+		// prepare text string by removing target info from the word count
+		let sectionTextLines: string[] = documentLines.slice(lastHeaderLine, nextHeaderLine - 1);
+		let textString: string = sectionTextLines.join(' ');
+		textString = textString.replace(/\(Target:\s[0-9]+\)/, '');
+
+		// get section word count
+		let wordCount: number = 0;
+		if (textString !== "") {
+			wordCount = this._getWordCount(textString);
+		}
+
+		// calculate completion percentages and update the status bar
+		if (wordCount > 0 && lastHeaderTarget > 0) {
+			let percentComplete: number = Math.round(wordCount * 100 / lastHeaderTarget);
+			this._statusBarItem.text = `$(pencil) Section progress: ${percentComplete}% of ${lastHeaderTarget} target`;
+			this._statusBarItem.show();
+		}
+	}
+
+	private _getTargets(documentLines: string[]) {
 		let targets: TargetData[] = []
+
+		// find document's section targets
 		documentLines.forEach(line => {
-			
+
 			// set up data object
 			let targetData = new TargetData;
 
@@ -71,26 +106,10 @@ class WordCounter {
 			targets.push(targetData)
 		});
 
-		// check current section against previous header
-		let selectionLine: number = editor.selection.start.line;
-		let lastHeaderLevel: number = -1;
-		let lastHeaderTarget: number = -1;
-		let lastHeaderLine: number = -1;
-		let currentLine: number = selectionLine;
+		return targets;
+	}
 
-		while (currentLine >= 0 && lastHeaderLine < 0) {
-			// test each previous line until a header is found, then set the current section target
-			if (targets[currentLine].isHeader) {
-				lastHeaderLevel = targets[currentLine].headerLevel;
-				lastHeaderLine = currentLine;
-				if (targets[currentLine].hasTarget) {
-					lastHeaderTarget = targets[currentLine].target;
-				}
-			}
-			currentLine--;
-		}
-
-		// set next header line to get section range
+	private _findNextHeaderLine(selectionLine: number, targets: TargetData[]) {
 		let nextHeaderLine: number = selectionLine;
 		let nextLineFound: boolean = false;
 		while (!nextLineFound && nextHeaderLine < targets.length) {
@@ -99,29 +118,21 @@ class WordCounter {
 			}
 			nextHeaderLine++;
 		}
-
-		// get text string
-		let sectionTextLines = documentLines.slice(lastHeaderLine, nextHeaderLine - 1);
-		let textString = sectionTextLines.join(' ');
-
-		// remove target info from the word count
-		textString = textString.replace(/\(Target:\s[0-9]+\)/, '');
-		
-		// get section word count
-		let wordCount = 0;
-		if (textString !== "") {
-			wordCount = this._getWordCount(textString);
-		}
-
-		// calculate completion percentages and update the status bar
-		if (wordCount > 0 && lastHeaderTarget > 0) {
-			let percentComplete: number = Math.round(wordCount * 100 / lastHeaderTarget);
-			this._statusBarItem.text = `Section progress: ${percentComplete}% of ${lastHeaderTarget} target`;
-			this._statusBarItem.show();
-		}
+		return nextHeaderLine;
 	}
 
-	public _getWordCount(textString: string): number {
+	private _findLastHeaderLine(currentLine: number, targets: TargetData[]) {
+		let lastHeaderLine: number = -1;
+		while (currentLine >= 0 && lastHeaderLine < 0) {
+			if (targets[currentLine].isHeader) {
+				lastHeaderLine = currentLine;
+			}
+			currentLine--;
+		}
+		return lastHeaderLine;
+	}
+
+	private _getWordCount(textString: string): number {
 
 		// Parse out unwanted whitespace so the split is accurate 
 		textString = textString.replace(/(< ([^>]+)<)/g, '').replace(/\s+/g, ' ');
