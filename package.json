@@ -1,7 +1,7 @@
 {
-	"name": "selection-word-count",
-	"displayName": "Selection Word Count",
-	"description": "Get word count of a selection within markdown documents",
+	"name": "section-word-count-targets",
+	"displayName": "Section Word Count Targets",
+	"description": "Set and calculate progress toward word count targets within a markdown document",
 	"version": "0.0.1",
 	"engines": {
 		"vscode": "^1.50.0"

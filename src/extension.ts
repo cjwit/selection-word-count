@@ -27,7 +27,7 @@ class WordCounter {
 		this._statusBarItem = window.createStatusBarItem(StatusBarAlignment.Left);
 	}
 
-	public updateWordCount() {
+	public updateTargetCount() {
 		this._statusBarItem.hide();
 
 		// Get the current text editor 
@@ -43,15 +43,80 @@ class WordCounter {
 			return;
 		}
 
-		let textString = document.getText(editor.selection);
+		// get lines
+		let documentLines = document.getText().split('\n');
+		let targets: TargetData[] = []
+		documentLines.forEach(line => {
+			
+			// set up data object
+			let targetData = new TargetData;
+
+			// determine whether the line is a header
+			targetData.isHeader = line.search(/^#+\s/) != -1 ? true : false;
+
+			if (targetData.isHeader) {
+
+				// first space gives header level ("### " = 3);
+				targetData.headerLevel = line.search(/\s/);
+
+				// determine whether there is a target
+				targetData.hasTarget = line.search(/\(Target:\s[0-9]+\)$/) != -1 ? true : false;
+
+				// get target
+				if (targetData.hasTarget) {
+					let targetString = line.substring(line.search(/[0-9]+\)$/), line.length - 1);
+					targetData.target = Number(targetString);
+				}
+			}
+			targets.push(targetData)
+		});
+
+		// check current section against previous header
+		let selectionLine: number = editor.selection.start.line;
+		let lastHeaderLevel: number = -1;
+		let lastHeaderTarget: number = -1;
+		let lastHeaderLine: number = -1;
+		let currentLine: number = selectionLine;
+
+		while (currentLine >= 0 && lastHeaderLine < 0) {
+			// test each previous line until a header is found, then set the current section target
+			if (targets[currentLine].isHeader) {
+				lastHeaderLevel = targets[currentLine].headerLevel;
+				lastHeaderLine = currentLine;
+				if (targets[currentLine].hasTarget) {
+					lastHeaderTarget = targets[currentLine].target;
+				}
+			}
+			currentLine--;
+		}
+
+		// set next header line to get section range
+		let nextHeaderLine: number = selectionLine;
+		let nextLineFound: boolean = false;
+		while (!nextLineFound && nextHeaderLine < targets.length) {
+			if (targets[nextHeaderLine].isHeader) {
+				nextLineFound = true;
+			}
+			nextHeaderLine++;
+		}
+
+		// get text string
+		let sectionTextLines = documentLines.slice(lastHeaderLine, nextHeaderLine - 1);
+		let textString = sectionTextLines.join(' ');
+
+		// remove target info from the word count
+		textString = textString.replace(/\(Target:\s[0-9]+\)/, '');
+		
+		// get section word count
 		let wordCount = 0;
 		if (textString !== "") {
 			wordCount = this._getWordCount(textString);
-		} 
+		}
 
-		// Update the status bar 
-		if (wordCount > 0) {
-			this._statusBarItem.text = wordCount !== 1 ? `${wordCount} words selected` : '1 word selected';
+		// calculate completion percentages and update the status bar
+		if (wordCount > 0 && lastHeaderTarget > 0) {
+			let percentComplete: number = Math.round(wordCount * 100 / lastHeaderTarget);
+			this._statusBarItem.text = `Section progress: ${percentComplete}% of ${lastHeaderTarget} target`;
 			this._statusBarItem.show();
 		}
 	}
@@ -82,7 +147,7 @@ class WordCounterController {
 
 	constructor(wordCounter: WordCounter) {
 		this._wordCounter = wordCounter;
-		this._wordCounter.updateWordCount();
+		this._wordCounter.updateTargetCount();
 
 		// subscribe to selection change and editor activation events
 		let subscriptions: Disposable[] = [];
@@ -90,7 +155,7 @@ class WordCounterController {
 		window.onDidChangeActiveTextEditor(this._onEvent, this, subscriptions);
 
 		// update the counter for the current file
-		this._wordCounter.updateWordCount();
+		this._wordCounter.updateTargetCount();
 
 		// create a combined disposable from both event subscriptions
 		this._disposable = Disposable.from(...subscriptions);
@@ -101,6 +166,13 @@ class WordCounterController {
 	}
 
 	private _onEvent() {
-		this._wordCounter.updateWordCount();
+		this._wordCounter.updateTargetCount();
 	}
+}
+
+class TargetData {
+	isHeader: boolean = false;
+	headerLevel: number = -1;
+	hasTarget: boolean = false;
+	target: number = -1;
 }
