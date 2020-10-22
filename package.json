@@ -40,5 +40,6 @@
 		"vscode-test": "^1.4.0"
 	},
 	"author": "Christopher Witulski",
-	"homepage": "https://cwitulski.com"
+	"homepage": "https://cwitulski.com",
+	"publisher": "witulski"
 }
