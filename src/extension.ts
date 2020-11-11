@@ -24,12 +24,11 @@ class WordCounter {
 
 	constructor() {
 		// Create as needed 
-		this._statusBarItem = window.createStatusBarItem(StatusBarAlignment.Left);
+		this._statusBarItem = window.createStatusBarItem(StatusBarAlignment.Right);
+		this.updateWordCount();
 	}
 
 	public updateWordCount() {
-		this._statusBarItem.hide();
-
 		// Get the current text editor 
 		let editor = window.activeTextEditor;
 		if (!editor) {
@@ -40,19 +39,31 @@ class WordCounter {
 
 		// Only update status if an MarkDown file 
 		if (document.languageId !== "markdown") {
+			this._statusBarItem.hide();
 			return;
 		}
 
-		let textString = document.getText(editor.selection);
-		let wordCount = 0;
-		if (textString !== "") {
-			wordCount = this._getWordCount(textString);
+		this._statusBarItem.show();
+
+		let documentTextString = document.getText();
+		let documentWordCount = 0;
+		if (documentTextString !== "") {
+			documentWordCount = this._getWordCount(documentTextString);
+		}
+
+		let selectionTextString = document.getText(editor.selection);
+		let selectionWordCount = 0;
+		if (selectionTextString !== "") {
+			selectionWordCount = this._getWordCount(selectionTextString);
 		} 
 
 		// Update the status bar 
-		if (wordCount > 0) {
-			this._statusBarItem.text = wordCount !== 1 ? `${wordCount} words selected` : '1 word selected';
-			this._statusBarItem.show();
+		if (documentWordCount > 0) {
+			this._statusBarItem.text = documentWordCount !== 1 ? `${documentWordCount} words` : '1 word';
+		}
+
+		if (selectionWordCount > 0) {
+			this._statusBarItem.text += ` (${selectionWordCount} selected)`;
 		}
 	}
 
