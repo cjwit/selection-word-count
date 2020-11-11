@@ -2,7 +2,7 @@
 	"name": "selection-word-count",
 	"displayName": "Selection Word Count",
 	"description": "Get word count of a selection within markdown documents",
-	"version": "0.2.0",
+	"version": "0.0.2",
 	"engines": {
 		"vscode": "^1.50.0"
 	},
