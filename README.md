@@ -1,6 +1,6 @@
 # Selection Word Count
 
-This simple VSCode extension calculates the word count of a selection and displays it in the status bar. The status bar item is hidden when nothing is selected (the selection word count is zero).
+This simple VSCode extension calculates and displays the word count of a document and, when there is a selection, the word count of a selection. It displays both in the status bar.
 
 ## Requirements
 
