@@ -37,12 +37,6 @@ class WordCounter {
 
 		let document = editor.document;
 
-		// Only update status if an MarkDown file 
-		if (document.languageId !== "markdown") {
-			this._statusBarItem.hide();
-			return;
-		}
-
 		this._statusBarItem.show();
 
 		let documentTextString = document.getText();
@@ -55,20 +49,24 @@ class WordCounter {
 		let selectionWordCount = 0;
 		if (selectionTextString !== "") {
 			selectionWordCount = this._getWordCount(selectionTextString);
-		} 
+		}
+
+		let selectionLineCount = 0;
+		if (selectionTextString !== "") {
+			selectionLineCount = this._getLineCount(selectionTextString);
+		}
 
 		// Update the status bar 
 		if (documentWordCount > 0) {
 			this._statusBarItem.text = documentWordCount !== 1 ? `${documentWordCount} words` : '1 word';
 		}
 
-		if (selectionWordCount > 0) {
-			this._statusBarItem.text += ` (${selectionWordCount} selected)`;
+		if (selectionWordCount > 0 || selectionLineCount > 0) {
+			this._statusBarItem.text += ` (${selectionWordCount} word${selectionWordCount > 1 ? 's' : ''} selected, ${selectionLineCount} line${selectionLineCount > 1 ? 's' : ''} selected)`;
 		}
 	}
 
 	public _getWordCount(textString: string): number {
-
 		// Parse out unwanted whitespace so the split is accurate 
 		textString = textString.replace(/(< ([^>]+)<)/g, '').replace(/\s+/g, ' ');
 		textString = textString.replace(/^\s\s*/, '').replace(/\s\s*$/, '');
@@ -79,6 +77,10 @@ class WordCounter {
 		}
 
 		return wordCount;
+	}
+
+	public _getLineCount(textString: string): number {
+		return textString.split('\n').length;
 	}
 
 	dispose() {
